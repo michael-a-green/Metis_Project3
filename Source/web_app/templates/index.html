@@ -8,9 +8,15 @@
 <div class="page-header">
     <h1>Hello, Please Enter the Fields As indicated below</h1>
     {% if not known  %}
-    <p>Pleased to meet you for the first time!</p>
+    <p>I have never seen this transaction!</p>
     {% else %}
-    <p>Happy to see you again!</p>
+    <p>I have seen this transaction before.</p>
+    {% endif %}
+    {% if prediction_performed %}
+    <p>You said isFraud is {{ Y }}</p>
+    <p>Fraud Detection System says isFraud is {{ Y_pred }}</p>
+    {% else %}
+    <p>No fraud detection computed yet.</p>
     {% endif %}
 </div>
 {{ wtf.quick_form(form) }}

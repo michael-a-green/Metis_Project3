@@ -18,6 +18,61 @@ from flask_mail import Mail
 from flask_mail import Message
 from threading import Thread
 
+#Stuff for the ML model
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import ticker
+import re
+import time
+import pickle
+
+
+import seaborn as sns
+
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_validate
+from sklearn.model_selection import KFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_validate
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.metrics import plot_confusion_matrix, plot_roc_curve, classification_report, confusion_matrix
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import roc_auc_score, roc_curve
+
+from xgboost import XGBClassifier
+
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import ADASYN
+
+import pymysql.cursors
+import sys
+
+#to speed up pandas operands
+from pandarallel import pandarallel
+
+#GPU
+
+import cupy as cnp
+import cudf
+import numpy as np
+import pandas as pd
+
+import gc
+from sklearn.preprocessing import LabelEncoder
+from cuml import train_test_split as gputrain_test_split
+from cuml import LinearRegression as gpuLinearRegression
+from cuml import KMeans as gpuKmeans
+from cuml import LogisticRegression as gpuLogisticRegression
+from cuml.ensemble import RandomForestClassifier as gpuRandomForestClassifier
+from cuml.experimental.preprocessing import scale
+
 
 class TransactionForm(FlaskForm):
     step = IntegerField("On what time step will this transaction occur. Will only accept numbers <= 744", validators=[DataRequired(),NumberRange(min=1,max=744,message="must enter value within acceptable range")])
@@ -102,6 +157,19 @@ migrate = Migrate(app, db)
 #
 ############
 
+##Get the normalizer and XGBoost objects
+XGB_MODEL_PICKLE_FILE = open("../../Data/xgb_model.pkl","rb")
+NORMALIZER_PICKLE_FILE = open("../../Data/normalizer.pkl","rb")
+
+xgb_model = pickle.load(XGB_MODEL_PICKLE_FILE)
+normalizer = pickle.load(NORMALIZER_PICKLE_FILE)
+
+if xgb_model == None:
+    print("Error - failed to read in ML model")
+if normalizer == None:
+    print("Error - failed to read in normalizer")
+
+
 #run send_email() in a different thread and thereby make it asynchronous to the thread
 #in which the app runs (making the call to send_email() non-blocking and making the app not lag out)
 def send_async_email(app,msg):
@@ -146,7 +214,12 @@ class TransactionTable(db.Model):
 @app.route('/', methods = ['GET','POST'])
 def index():
     form =  TransactionForm()
-
+    
+    # if prediction_performed != 1:
+    #     prediction_performed = 0
+    #     Y = 0
+    #     Y_pred = 0
+        
     if form.validate_on_submit():
         #print("you did it!")
         #just querying according to transtype,originator name, dest name, and amount, and step
@@ -184,16 +257,122 @@ def index():
             db.session.add(transaction)
             db.session.commit()
             session['known'] = False
-            send_email(app.config["PROJ3_ADMIN"],"New Transaction!!!","mail/new_transaction",transaction=transaction)
+
+            
+            
+            send_email(app.config["PROJ3_ADMIN"]," New Transaction!!!","mail/new_transaction",transaction=transaction)
         else:
             #print("Found this in the database already")
             #print("here it is-->\n",transaction)
             session['known'] = True
+            
+        X = [form.step.data,
+         form.amount.data,
+         form.oldbalanceOrg.data,
+         form.newbalanceOrig.data,
+         form.oldbalanceDest.data,
+         form.newbalanceDest.data,
+         0, #suspect code
+         0, #CASH_IN
+         0, #CASH_OUT
+         0, #DEBIT
+         0, #PAYMENT
+         0  #TRANSFER
+        ]
+        
+        Y = form.isFraud.data
+        print("type(Y) ",type(Y))
+        session["Y"] = Y
+        
+        if ((form.oldbalanceOrg.data == form.amount.data) or (form.newbalanceDest.data == form.amount.data)) and (form.newbalanceOrig.data == 0):
+            X[6] = 1.0
+        elif ((form.oldbalanceOrg.data == form.amount.data) or (form.newbalanceDest.data == form.amount.data)) and (form.newbalanceOrig.data < form.oldbalanceOrg.data):
+            X[6] = 0.6
+        elif (form.amount.data <= 10000000) and (form.transtype.data == "TRANSFER" or form.transtype.data == "CASH_OUT"):
+            X[6] = 0.1
+        else:
+            X[6] = 0.0
+            
+        #encode transtype string into a 1-hot value
+        if (form.transtype.data == "TRANSFER"):
+            X[11] = 1
+        elif (form.transtype.data == "PAYMENT"):
+            X[10] = 1
+        elif (form.transtype.data == "DEBIT"):
+            X[9] = 1
+        elif (form.transtype.data == "CASH_OUT"):
+            X[8] = 1
+        elif (form.transtype.data == "CASH_IN"):
+            X[7] = 1
+        else:
+            pass
+        
+        ## Normalize ML model input data
+        print("X before numpy conversion \n",X,"\n")
+        #X = np.array(X)
+        #X = X.reshape(1,-1)
+        #X = pd.DataFrame(X)
+        cols_used_by_model = xgb_model.get_booster().feature_names
+        #feature_names = xgb_model.feature_names
+        print("cols_used_by_model = ",cols_used_by_model)
+        print("type(cols_used_by_model[0]) is ",type(cols_used_by_model[0]))
+        #print("feature_names = ",feature_names,"\n")        
+        #X =  X[feature_names]
+        print("X after numpy conversion \n",X,"\n")
+        
+
+        # ['f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11']
+
+        
+        print("X after preprocessing\n",X,"\n")
+
+        #X = X.values
+        print("type(X) is {}".format(type(X)))
+        print("X just before normalization \n",X,"\n")
+        X = np.array(X).reshape(1,-1)
+        print("X just before normalization after converting to a np array\n",X,"\n")
+
+        X_normal = normalizer.transform(X)
+        print("type(X_normal) ",type(X_normal))
+        print("X after normalization \n",X_normal,"\n")
+
+        #X_normal = X_normal.reshape(1,-1)
+
+        Xdict = {
+            '0':  [ X_normal[0][0]  ],
+            '1':  [ X_normal[0][1]  ],
+            '2':  [ X_normal[0][2]  ],
+            '3':  [ X_normal[0][3]  ],
+            '4':  [ X_normal[0][4]  ],
+            '5':  [ X_normal[0][5]  ],
+            '6':  [ X_normal[0][6]  ],
+            '7':  [ X_normal[0][7]  ],
+            '8':  [ X_normal[0][8]  ],
+            '9':  [ X_normal[0][9]  ],
+            '10': [ X_normal[0][10] ],
+            '11': [ X_normal[0][11] ]
+        }
+        vector = pd.DataFrame(Xdict)
+        X_normal = vector[cols_used_by_model].iloc[[-1]]
+
+        print("type(X_normal) before prediction \n",type(X_normal))
+        print("X_normal before prediction \n",X_normal)
+        
+        Y_pred = xgb_model.predict(X_normal)
+        Y_pred = Y_pred[0]
+        Y_pred = int(Y_pred)
+        print("type(Y_pred) ",type(Y_pred))        
+        session["Y_pred"] = Y_pred
+        session["prediction_performed"] = 1
 
         #go back to the index URL
+        print("prediction_performed = {} Y_pred = {} Y = {}".format(session.get("prediction_performed",0),session.get("Y_pred",0),session.get("Y",0)))
+        print("redirect URL performed")
         return redirect(url_for('index'))
 
-    return render_template('index.html', current_time=datetime.utcnow(), form=form, known=session.get('known',False))
+    print("prediction_performed = {} Y_pred = {} Y = {}".format(session.get("prediction_performed",0),session.get("Y_pred",0),session.get("Y",0)))
+    print("render_template in index performed")
+    return render_template('index.html', current_time=datetime.utcnow(), form=form, known=session.get('known',False), Y_pred=session.get("Y_pred",0),Y=session.get("Y",0),prediction_performed=session.get("prediction_performed",0))
 
 #error handling routes
 #for 404 error
