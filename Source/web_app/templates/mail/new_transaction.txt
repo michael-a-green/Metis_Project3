@@ -1,0 +1,24 @@
+Transaction with the following parameters has been entered:
+
+{{ transaction.step }}
+
+{{ transaction.transtype }} 
+
+{{ transaction.amount }} 
+
+{{ transaction.nameOrig }} 
+
+{{ transaction.oldbalanceOrg }} 
+
+{{ transaction.newbalanceOrig }} 
+
+{{ transaction.nameDest }} 
+
+{{ transaction.oldbalanceDest }} 
+
+{{ transaction.newbalanceDest }} 
+
+{{ transaction.isFraud }} 
+
+{{ transaction.isFlaggedFraud }} 
+

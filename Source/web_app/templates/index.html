@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+<!-- used to render forms in the Bootsrap style -->
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Mobile Payments Fraud Detector{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello, Please Enter the Fields As indicated below</h1>
+    {% if not known  %}
+    <p>I have never seen this transaction!</p>
+    {% else %}
+    <p>I have seen this transaction before.</p>
+    {% endif %}
+    {% if prediction_performed %}
+    <p>You said isFraud is {{ Y }}</p>
+    <p>Fraud Detection System says isFraud is {{ Y_pred }}</p>
+    {% else %}
+    <p>No fraud detection computed yet.</p>
+    {% endif %}
+</div>
+{{ wtf.quick_form(form) }}
+<p></p>
+<p> The local date and time is {{ moment(current_time).format('LLL')  }}.</p>
+<p>That was {{ moment(current_time).fromNow(refresh=True)  }}</p>
+{% endblock %}
+
