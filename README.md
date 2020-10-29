@@ -150,7 +150,7 @@ to see a demo you can download a video here: [fraud_detection\_web\_app\_demo.mp
 * It sends an email notification whenever a new transaction that it has never
   seen before has been entered.
 * When you hit the **\[Submit\]** button the web application performs a
-  predication of whether or not the transaction you entered is
+  prediction of whether or not the transaction you entered is
   fraudulent. This is highlighted in the demonstration video referenced above
 
 ## Possible Impacts of Project
