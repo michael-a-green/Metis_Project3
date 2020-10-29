@@ -123,8 +123,8 @@ Linux _REDACTED_ 5.4.14-1-default #1 SMP Thu Jan 23 08:54:47 UTC 2020 (fc4ea7a) 
 Running the web application will required the following:
 
 * A setup script to set the application configuration variables that contain
-  the credential to enable the web application to access the remote SQL
-  database and the send emails to the admin of the web application. You can
+  the credentials to enable the web application to access the remote SQL
+  database and to send emails to the admin of the web application. You can
   ask me for a copy of the setup script.
   
 Once you have obtained the the setup script you can run the following commands
