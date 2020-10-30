@@ -153,5 +153,5 @@ to see a demo you can download a video here: [fraud_detection\_web\_app\_demo.mp
   prediction of whether or not the transaction you entered is
   fraudulent. This is highlighted in the demonstration video referenced above
 
-## Possible Impacts of Project
+
 
