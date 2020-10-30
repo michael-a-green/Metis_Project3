@@ -65,7 +65,7 @@ model selection, and final model testing and evaluation code.
 
 
 
-* `Documents/Linke_to_Presentation.md`: Mark down file that has a link to the presentation.
+* `Documents/Linke_to_Presentation.md`: Markdown file that has a link to the presentation.
 * `Source/web_app/project3.py`: Main flask application code
 * `Source/web_app/migrations/*`: Files used to use [alembic]() to version the
   database used by the web application
