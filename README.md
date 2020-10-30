@@ -59,12 +59,12 @@ The complete list of modules used is in the requirements files: `Source/conda_re
 
 ## Description of Files
 
-`Source/Project3_Final.ipynb`: The jupyter notebook that contains the web scrapping
-software, [EDA](https://en.wikipedia.org/wiki/Exploratory_data_analysis),
-model selection, and final model testing and evaluation code.
 
 
 
+* `Source/Project3_Final.ipynb`: The jupyter notebook that contains the web
+scrapping software,
+[EDA](https://en.wikipedia.org/wiki/Exploratory_data_analysis), model selection, and final model testing and evaluation code.
 * `Documents/Linke_to_Presentation.md`: Markdown file that has a link to the presentation.
 * `Source/web_app/project3.py`: Main flask application code
 * `Source/web_app/migrations/*`: Files used to use [alembic]() to version the
